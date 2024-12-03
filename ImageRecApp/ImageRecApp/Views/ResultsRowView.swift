@@ -8,16 +8,23 @@
 import SwiftUI
 
 struct ResultsRowView: View {
+    let objectName: String
+    let confidenceLevel: String
+    
     var body: some View {
-        HStack {
-            Text("Result")
-                .font(.headline)
-            Spacer()
-            Text("28%")
+        NavigationLink(destination: DefinitionView(objectName: objectName)) {
+            HStack {
+                Text(objectName)
+                    .font(.headline)
+                Spacer()
+                Text(confidenceLevel)
+                    .foregroundColor(.gray)
+            }
+            .padding(.vertical, 5)
         }
     }
 }
 
 #Preview {
-    ResultsRowView()
+    ResultsRowView(objectName: "Object", confidenceLevel: "85%")
 }
