@@ -6,9 +6,13 @@
 //
 
 import SwiftUI
+import Alamofire
 
 struct DefinitionView: View {
     let objectName: String
+    @State private var definitions: [Definition] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String? = nil
     
     var body: some View {
         ScrollView {
@@ -24,12 +28,29 @@ struct DefinitionView: View {
                 
                 Divider()
                 
-                Text("""
-                This is a detailed description of \(objectName). It includes relevant information about the detected object, its characteristics, and possible applications. 
-                """)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineSpacing(5)
+                if isLoading {
+                    ProgressView("Loading...")
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else if let errorMessage = errorMessage {
+                    Text("Error: \(errorMessage)")
+                        .foregroundColor(.red)
+                } else {
+                    ForEach(definitions, id: \.definition) { definition in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(definition.definition)
+                                .font(.body)
+                            
+                            if let example = definition.example {
+                                Text("Example: \(example)")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                    }
+                }
                 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -53,10 +74,37 @@ struct DefinitionView: View {
         }
         .navigationTitle(objectName)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            fetchDefinition(for: objectName)
+        }
     }
+    
+    private func fetchDefinition(for word: String) {
+            let url = "https://api.dictionaryapi.dev/api/v2/entries/en/\(word)"
+            
+            AF.request(url).responseDecodable(of: [DictionaryEntry].self) { response in
+                switch response.result {
+                case .success(let entries):
+                    for entry in entries {
+                        for meaning in entry.meanings {
+                            if let firstDefinition = meaning.definitions.first {
+                                self.definitions = [Definition(
+                                    definition: firstDefinition.definition,
+                                    example: firstDefinition.example)]
+                                self.isLoading = false
+                                return
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+                isLoading = false
+            }
+        }
 }
 struct DefinitionView_Previews: PreviewProvider {
     static var previews: some View {
-        DefinitionView(objectName: "Sample Object")
+        DefinitionView(objectName: "cat")
     }
 }
